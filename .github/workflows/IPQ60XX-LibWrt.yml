@@ -9,8 +9,8 @@ permissions:
   actions: write
 
 env:
-  REPO_URL: https://github.com/laipeng668/openwrt-6.x.git
-  REPO_BRANCH: main-nss
+  REPO_URL: https://github.com/laipeng668/LibWrt.git
+  REPO_BRANCH: 25.12-nss
   CONFIG_FILE: configs/IPQ60XX.config
   GENERAL_CONFIG_FILE: configs/General.config
   DIY_SCRIPT: scripts/Roc-script.sh
@@ -49,20 +49,24 @@ jobs:
 
       - name: 初始化编译环境
         env:
-        REPO_URL: https://github.com/laipeng668/LibWrt.git
-        REPO_BRANCH: 25.12-nss
-        CONFIG_FILE: configs/IPQ60XX.config
-        GENERAL_CONFIG_FILE: configs/General.config
-        DIY_SCRIPT: scripts/Roc-script.sh
-        FIRMWARE_TAG: 360V6-NSS
-        TZ: Asia/Shanghai
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          if [ -d ~/apt-cache ]; then
+            sudo cp -r ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          fi
+          sudo -E apt-get -y update
+          sudo -E apt-get -y install $(curl -fsSL ophub.org/ubuntu2404-make-openwrt-depends)
+          mkdir -p ~/apt-cache
+          cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
+          sudo -E systemctl daemon-reload
+          sudo timedatectl set-timezone "$TZ"
 
       - name: 克隆 OpenWrt 源码
         run: |
           df -hT $GITHUB_WORKSPACE
           sudo mkdir -p /mnt/openwrt
           sudo chown -R $(id -u):$(id -g) /mnt/openwrt
-          git clone --depth 1 -b main --single-branch https://github.com/laipeng668/LibWrt.git /mnt/openwrt
+          git clone --depth 1 -b ${{ env.REPO_BRANCH }} --single-branch ${{ env.REPO_URL }} /mnt/openwrt
           cd /mnt/openwrt
           echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
           VERSION_INFO=$(git show -s --date=short --format="作者: %an<br/>时间: %cd<br/>内容: %s<br/>hash: %H")
