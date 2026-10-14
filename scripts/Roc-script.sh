@@ -5,41 +5,6 @@ set -e
 
 # ====================== 1. 修改默认管理IP + 主机名 ======================
 sed -i 's/OpenWrt/360V6-NSS/g' package/base-files/files/bin/config_generate
-
-# ====================== 2. 拉取 EasyTier 插件 ======================
-git clone --depth 1 https://github.com/EasyTier/luci-app-easytier.git package/luci-app-easytier 2>/dev/null || true
-
-# ====================== 2.1 拉取网络向导插件 ======================
-git clone --depth 1 https://github.com/sirpdboy/luci-app-netwizard.git package/luci-app-netwizard 2>/dev/null || true
-
-# ====================== 2.2 netwizard 完成后 NSS 恢复钩子 ======================
-# 网络向导会一次性修改多个网络配置，可能导致 NSS 驱动无法正确恢复
-# 在 netwizard 完成后自动重启 NSS 服务
-mkdir -p package/base-files/files/etc/uci-defaults
-cat > package/base-files/files/etc/uci-defaults/95-netwizard-nss-fix <<'EOF'
-#!/bin/sh
-# 等待 netwizard 完成所有网络配置
-sleep 5
-
-# 重启 NSS 服务恢复接口绑定
-if [ -x /etc/init.d/qca-nss-ecm ]; then
-    /etc/init.d/qca-nss-ecm restart 2>/dev/null
-fi
-if [ -x /etc/init.d/qca-nss-drv-wifi ]; then
-    /etc/init.d/qca-nss-drv-wifi restart 2>/dev/null
-fi
-if [ -x /etc/init.d/firewall ]; then
-    /etc/init.d/firewall reload 2>/dev/null
-fi
-
-# 重启网络服务确保所有接口正常
-/etc/init.d/network restart 2>/dev/null
-
-rm -f /etc/uci-defaults/95-netwizard-nss-fix
-exit 0
-EOF
-chmod +x package/base-files/files/etc/uci-defaults/95-netwizard-nss-fix
-
 # ====================== 3. NSS 网络重载修复（解决修改LuCI设置后WAN/WAN6消失） ======================
 # IPQ60XX + NSS 固件在 uci commit 触发 netifd 重载时，
 # NSS ECM/DP 驱动可能无法正确恢复接口绑定，导致 WAN/WAN6 消失、下级设备断线。
