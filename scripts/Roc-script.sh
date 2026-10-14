@@ -93,7 +93,7 @@ mkdir -p package/base-files/files/etc/uci-defaults
 cat > package/base-files/files/etc/uci-defaults/99-base-setting <<EOF
 #!/bin/sh
 # 修改默认管理 IP
-uci set network.lan.ipaddr='192.168.50.1'
+uci set network.lan.ipaddr='192.168.60.1'
 uci set network.lan.netmask='255.255.255.0'
 uci commit network
 
@@ -121,50 +121,3 @@ uci commit firewall
 exit 0
 EOF
 chmod +x package/base-files/files/etc/uci-defaults/99-base-setting
-
-# ====================== 6. AdGuardHome 预配置 ======================
-cat > package/base-files/files/etc/uci-defaults/99-adguardhome-setting <<'EOF'
-#!/bin/sh
-# 先启用 AdGuardHome 服务
-uci set adguardhome.adguardhome.enabled='1'
-uci set adguardhome.adguardhome.redirect='1'
-uci set adguardhome.adguardhome.httpport='3000'
-uci commit adguardhome
-
-# 启动 AdGuardHome 服务（首次启动会生成默认配置）
-/etc/init.d/adguardhome enable 2>/dev/null
-/etc/init.d/adguardhome start 2>/dev/null
-
-# 等待配置文件生成（最多等待30秒）
-AGH_CONF=""
-for i in $(seq 1 30); do
-    AGH_CONF="$(uci -q get adguardhome.adguardhome.configdir)/AdGuardHome.yaml"
-    [ -f "$AGH_CONF" ] && break
-    sleep 1
-done
-
-# 如果配置文件存在则修改
-if [ -f "$AGH_CONF" ]; then
-    # 备份原始配置
-    cp "$AGH_CONF" "${AGH_CONF}.bak"
-
-    # 设置中文界面（先删除再添加，确保生效）
-    sed -i '/^language:/d' "$AGH_CONF"
-    sed -i '1i\language: zh-cn' "$AGH_CONF"
-    
-    # 设置上游 DNS（阿里 + 腾讯 + Cloudflare）
-    sed -i '/^  upstream_dns:/,/^[^ ]/ {
-        /^  upstream_dns:/!{
-            /^  - /d
-        }
-    }' "$AGH_CONF"
-    sed -i '/^  upstream_dns:/a\  - https://dns.alidns.com/dns-query\n  - https://doh.pub/dns-query\n  - https://1.1.1.1/dns-query' "$AGH_CONF"
-
-    # 重启 AdGuardHome 使配置生效
-    /etc/init.d/adguardhome restart 2>/dev/null
-fi
-
-rm -f /etc/uci-defaults/99-adguardhome-setting
-exit 0
-EOF
-chmod +x package/base-files/files/etc/uci-defaults/99-adguardhome-setting
