@@ -49,17 +49,13 @@ jobs:
 
       - name: 初始化编译环境
         env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          if [ -d ~/apt-cache ]; then
-            sudo cp -r ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
-          fi
-          sudo -E apt-get -y update
-          sudo -E apt-get -y install $(curl -fsSL ophub.org/ubuntu2404-make-openwrt-depends)
-          mkdir -p ~/apt-cache
-          cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
-          sudo -E systemctl daemon-reload
-          sudo timedatectl set-timezone "$TZ"
+        REPO_URL: https://github.com/laipeng668/LibWrt.git
+        REPO_BRANCH: 25.12-nss
+        CONFIG_FILE: configs/IPQ60XX.config
+        GENERAL_CONFIG_FILE: configs/General.config
+        DIY_SCRIPT: scripts/Roc-script.sh
+        FIRMWARE_TAG: 360V6-NSS
+        TZ: Asia/Shanghai
 
       - name: 克隆 OpenWrt 源码
         run: |
