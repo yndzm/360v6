@@ -5,6 +5,12 @@ set -e
 
 # ====================== 1. 修改默认管理IP + 主机名 ======================
 sed -i 's/OpenWrt/360V6-NSS/g' package/base-files/files/bin/config_generate
+# ====================== 0. 拉取/更新 Mosdns 与 Geodata 插件 ======================
+echo "正在清理并克隆 mosdns 插件..."
+find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+find ./ | grep Makefile | grep mosdns | xargs rm -f
+git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 # ====================== 3. NSS 网络重载修复（解决修改LuCI设置后WAN/WAN6消失） ======================
 # IPQ60XX + NSS 固件在 uci commit 触发 netifd 重载时，
 # NSS ECM/DP 驱动可能无法正确恢复接口绑定，导致 WAN/WAN6 消失、下级设备断线。
